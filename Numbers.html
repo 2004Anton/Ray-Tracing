@@ -1,0 +1,67 @@
+<body>
+  Number <input type="number" id="num1"> Base <input type="number" id="base1"> = <p id="output1">0</p>
+  <br>
+  Number <input type="text" id="num2"> Base <input type="number" id="base2"> = <p id="output2">0</p>
+  <input type="button" onclick="update()" value="Update">
+</body>
+<script>
+
+    function to_base(n,r){
+      let converter = '0123456789abcdefghijklmnopqrstuvwxyz';
+      let ans = '';
+      let test = 1;
+      if(r < 2 || r > converter.length){
+        return 'Not possible';
+      }
+      if(n == 1){
+        return '1';
+      }
+      while(test < n){
+        test = test*r;
+      }
+      while(test > 1){
+        test = test/r;
+        let temp = Math.floor(n/test);
+        if(temp*test == test*r){
+          console.log('here');
+          ans+='1';
+          n-=(temp*test);
+          test*=r;
+        }
+        else{
+          ans+=converter[temp];
+          n-=(temp*test);
+        }
+      }
+      return ans;
+    }
+    function from_base(n, r){
+      let converter = '0123456789abcdefghijklmnopqrstuvwxyz';
+      let ans = 0;
+      let tempr = 1;
+      for(let i = n.length-1; i >= 0; i--){
+        if(r <= converter.indexOf(n[i])){
+          return 'not possible';
+        }
+        ans += converter.indexOf(n[i]) * tempr;
+        tempr *= r;
+      }
+      return ans;
+    }
+    function test(n, r) {
+        let s = to_base(n, r);
+        console.log('to_base',n, r, s);
+    }
+    function test2(n,r){
+      let s = from_base(n,r);
+      console.log('from_base',n,r,s);
+    }
+    function update(){
+      let n = document.getElementById("num1").value;
+      let r = document.getElementById("base1").value
+      document.getElementById("output1").innerHTML = to_base(n,r);
+       n = document.getElementById("num2").value;
+       r = document.getElementById("base2").value
+      document.getElementById("output2").innerHTML = from_base(n,r);
+    }
+</script>

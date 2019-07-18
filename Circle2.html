@@ -1,0 +1,285 @@
+<body>
+</body>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+<script>
+  let eps = 1e-10;
+  let debug = false;
+  let shapes = [
+    {s: 'sphere', c: [-3, 0, -3], r: 1, color: [200, 100, 100]},
+    {s: 'sphere', c: [0, 1, -5], r: 2, color: [0, 0, 255]},
+    //{s: 'sphere', c: [0,1,-3], r: 2, color: [255,0,0]},
+    //{s: 'sphere', c: [8,8,5], r: 0, color: [255,0,0]},
+    //{s: 'sphere', c: [0,1,-5], r: 2, color: [255,0,0]},
+    {s: 'plane', n: [0,1,0], d: -1, color: [255,200,200]},
+    //{s: 'disk', x: 0.25, y: 0.25, r: 0.25, color: [255, 128, 0]},
+    //{s: 'disk', x: 0.75, y: 0.5, r: 0.5, color: [255, 0, 0]},
+    //{s: 'disk', x: 0.25, y: 0.25, r: 0.6, color: [0, 128, 0]},
+    //{s: 'disk', x: -1, y: 0.25, r: 0.6, color: [0, 200, 0]},
+    //{s: 'rect', x: -0.5, y: -0.75, w: 1, h: 1.5, color: [200, 100, 200]},
+  ];
+  let light = [[-10,8,-5]];
+  function ray_intersect_shpere(g,d,s,r){
+    let x = sub(g, s);
+    let a = dot(d, d);
+    let b = 2 * dot(x, d);
+    let c = dot(x,x) - r**2;
+    //onsole.log(d);
+    let discr = b**2 - 4 * a * c;
+    if (discr < 0) return Infinity;
+    let t = (-b - Math.sqrt(discr)) / (2 * a);
+    return t;
+  }
+
+  function shading(g,d,t,n,l){
+    let m = norm(sub(l,add(g,scale(d,t))));
+    if(debug) console.log(`light vector ${m}, normal vector ${n}`);
+    let shade = dot(m,n);
+    //console.log(shade);
+    return shade;
+  }
+
+  function ray_intersect_plane(g,d,n,d2){
+    let a = d2-dot(g,n);
+    //console.log(dot(g,n));
+    let b = dot(n,d);
+    //console.log(b);
+    if(b != 0){
+      let t = a/b;
+      //console.log(t);
+      return t;
+    }
+    return Infinity;
+  }
+
+
+  function intersect(g,d){
+    //console.log(d);
+    if(debug) console.log('origin: ', g, ', direction: ', d);
+    let nearest = {t: Infinity, i: Infinity,n: null};
+    for(let i = 0; i < shapes.length; i++){
+      let hit = {t: Infinity, i: Infinity, n: null};
+      let shape = shapes[i];
+      if(shape.s == 'sphere'){
+        hit.t = ray_intersect_shpere(g,d,shape.c,shape.r);
+        //console.log(hit.t);
+        hit.i = i;
+        let point = add(scale(d,hit.t),g);
+        let n = norm(sub(point,shape.c));
+        if(debug) console.log('sphere, point', point,'n', n)
+        hit.n = n;
+      }
+      if(shape.s == 'plane'){
+        hit.t = ray_intersect_plane(g,d,shape.n,shape.d);
+        hit.i = i;
+        hit.n = shape.n;
+        if(debug) console.log('plane, point', add(g,scale(d,hit.t)),'n', hit.n)
+
+      }
+      if(hit.t < nearest.t && hit.t > eps){
+        nearest.t = hit.t;
+        nearest.i = hit.i;
+        nearest.n = hit.n;
+      }
+    }
+    if(debug) console.log('\n');
+    return nearest;
+  }
+  function distance_to_light(g,d,light){
+    let distance = Math.sqrt((light[0]-g[0])**2 + (light[1]-g[1])**2 + (light[2]-g[2])**2);
+    return distance;
+  }
+  // function ray_color(g,d){
+  //   //console.log(d);
+  //   let color = [0,0,0];
+  //   let temp = [0,0,0]
+  //   let s = intersect(g,d);
+  //   if(s.t < Infinity && s.t > eps){
+  //     for(let k = 0; k < light.length; k++){
+  //       let point = add(g,scale(d,s.t));
+  //       let shape = shapes[s.i];
+  //       let ldir = norm(sub(light[k], point));
+  //       let lhit = intersect(point, ldir);
+  //
+  //       if(debug) console.log(`ldir ${ldir}, lhit ${lhit.t}`);
+  //       if(debug) console.log('normal vector', s.n);
+  //       //console.log(lhit);
+  //       let shade = shading(g,d,s.t,s.n,light[k]);
+  //       let temp = scale(shape.color,shade);
+  //       let counter = 0;
+  //       for(let i = 0; i < temp.length; i++){
+  //         if(temp[i] < 0){
+  //           counter++;
+  //         }
+  //       }
+  //       if(counter == 0){
+  //         color = temp;
+  //       }
+  //       if(lhit.t != Infinity){
+  //         let point2 = add(point,scale(ldir,lhit.t));
+  //         let distance_light = distance_to_light(point2,ldir,light[k]);
+  //         let scal = Math.min(1,lhit.t/distance_light);
+  //         //console.log(scal);
+  //         color = scale(color,scal);
+  //       }
+  //       //console.log(shape.color);
+  //       //console.log(color);
+  //     }
+  //   }
+  //   return color;
+  // }
+
+  function ray_color(g,d){
+    //console.log(d);
+    let color = [0,0,0];
+    let temp = [0,0,0]
+    let s = intersect(g,d);
+    if(s.t < Infinity && s.t > eps){
+      for(let k = 0; k < light.length; k++){
+        let point = add(g,scale(d,s.t));
+        let shape = shapes[s.i];
+        let ldir = norm(sub(light[k], point));
+        let lhit = intersect(point, ldir);
+
+        if(debug) console.log(shapes[s.i].s, `ldir ${ldir}, lhit ${lhit.t}`);
+        if(debug) console.log('normal vector', s.n);
+        //console.log(lhit);
+        let shade = shading(g,d,s.t,s.n,light[k]);
+        let tempt = scale(shape.color,shade);
+        let counter = 0;
+        for(let i = 0; i < tempt.length; i++){
+          if(tempt[i] < 0){
+            counter++;
+          }
+        }
+        if(counter == 0){
+          temp = tempt;
+          if(lhit.t != Infinity){
+            let point2 = add(point,scale(ldir,lhit.t));
+            let distance_light = distance_to_light(point2,ldir,light[k]);
+            let scal = Math.min(1,lhit.t/distance_light);
+            //console.log(scal);
+            temp = scale(temp,scal);
+          }
+
+          if(len(temp) > len(color)){
+            color = temp;
+          }
+          //console.log(shape.color);
+          //console.log(color);
+        }
+      }
+    }
+    return color;
+  }
+
+  function rect2(x,y){
+    if(x > rect.x-rect.width && x < rect.x && y > rect.y &&  y  < rect.y + rect.height ){
+      return rect.color;
+    }
+    return [255,255,255];
+  }
+  function screen_to_viewport(x, y, w, h) {
+    if(w > h){
+      return [x/h*2-1,1-y/h*2];
+    }
+    else if(h < w){
+      return [x/w*2-1,1-y/w*2];
+    }
+    return [x / w * 2 - 1, 1 - y / h * 2];
+  }
+  function unmap(point,w,h){
+    if(h == 0 || w == 0){
+      return null;
+    }
+    return [Math.round(point[0]*(w)+w),Math.round((-point[1]*(h)+h))];
+  }
+  function scale(v, s) {
+    return [s * v[0], s * v[1], s * v[2]];
+  }
+  function add(u, v) {
+      return [u[0] + v[0], u[1] + v[1], u[2] + v[2]];
+  }
+  function sub(u, v) {
+    return [u[0] - v[0], u[1] - v[1], u[2] - v[2]];
+  }
+  function len(v) {
+    return Math.sqrt(v[0]**2 + v[1]**2 + v[2]**2);
+  }
+
+  function norm(v) {
+      return scale(v, 1/len(v));
+  }
+  function dot(u,v) {
+    return u[0] * v[0] + u[1] * v[1] + u[2] * v[2];
+  }
+  function len2(v){
+    return Math.sqrt(dot(v,v));
+  }
+
+  function pixel(coordinates,width,height) {
+    [x,y] = coordinates;
+    let g = [0,0,0];
+    let d = norm([x,y,-1]);
+    if(debug)console.log('PIXEL \n g: ', g, ', d: ', d)
+    let color = ray_color(g,d);
+    return color;
+  }
+
+    class Canvas {
+      constructor(w, h) {
+        [this.w, this.h] = [w, h];
+        this.canvas = document.createElement("canvas");
+        this.canvas.width = this.w;
+        this.canvas.height = this.h;
+
+        document.querySelector('body').append(this.canvas);
+        this.ctx = this.canvas.getContext('2d');
+        this.imageData = this.ctx.getImageData(0, 0, this.w, this.h);
+        this.data = this.imageData.data;
+      }
+      setPixel(x, y, r, g, b, a) {
+        let index = 4 * (y * this.w + x);
+        [this.data[index+0], this.data[index + 1], this.data[index + 2], this.data[index + 3]] = [r, g, b, a];
+      }
+      setPixels() {
+        this.ctx.putImageData(this.imageData, 0, 0);
+      }
+    }
+
+    let canvas = new Canvas(500,500);
+
+    function frame(time){
+      let x = 10*Math.cos(time);
+      let y = 10*Math.sin(time) -5;
+      light[0] = [x, light[0][1],y];
+      console.log(light[0]);
+      for(let i = 0; i < canvas.h; i++){
+        for(let k = 0; k < canvas.w; k++){
+          let [r,g,b] = pixel(screen_to_viewport(i,k,canvas.w,canvas.h),canvas.w,canvas.h);
+          canvas.setPixel(i,k,r,g,b,255);
+        }
+      }
+      canvas.setPixels();
+    }
+    let time = 0;
+    setInterval(function(){frame(time+=0.01)}, 10);
+
+    /*
+    for(let i = 0; i < canvas.h; i++){
+      for(let k = 0; k < canvas.w; k++){
+        let [r,g,b] = pixel(screen_to_viewport(i,k,canvas.w,canvas.h),canvas.w,canvas.h);
+        canvas.setPixel(i,k,r,g,b,255);
+      }
+    }
+    canvas.setPixels();
+    */
+    $('canvas').click(event => {
+      debug = true;
+      console.clear();
+      console.log(event);
+      console.log(event.offsetX + ' ' + event.offsetY);
+      let rgb = pixel(screen_to_viewport(event.offsetX,event.offsetY, canvas.w, canvas.h));
+      console.log('rgb:', rgb);
+      debug = false;
+    });
+</script>

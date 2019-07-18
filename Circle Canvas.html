@@ -1,0 +1,64 @@
+<body>
+  </body>
+<style>
+  canvas{
+    background: white;
+    margin: 10px;
+  }
+  </style>
+<script>
+
+  class Canvas {
+    constructor(w, h) {
+      [this.w, this.h] = [w, h];
+      this.canvas = document.createElement("canvas");
+      this.canvas.width = this.w;
+      this.canvas.height = this.h;
+
+      document.querySelector('body').append(this.canvas);
+      this.ctx = this.canvas.getContext('2d');
+      this.imageData = this.ctx.getImageData(0, 0, this.w, this.h);
+      this.data = this.imageData.data;
+    }
+    setPixel(x, y, r, g, b, a) {
+      let index = 4 * (y * this.w + x);
+      [this.data[index+0], this.data[index + 1], this.data[index + 2], this.data[index + 3]] = [r, g, b, a];
+    }
+    setPixels() {
+      this.ctx.putImageData(this.imageData, 0, 0);
+    }
+  }
+  let shapes = [{s: 'rect', x: 10, y: 10, height: 20, width: 10, color: [255,0,255]},
+                {s: 'rect', x: 230, y:130, height: 100, width: 20, color: [100,255,255]},
+                {s: 'circle', x: 200, y: 50, radius: 100, color:[100,100,255]}];
+  function pixel(x, y, shapes){
+    let color = [255,255,255];
+    for(let i = 0; i < shapes.length; i++){
+      let shape = shapes[i];
+      if(shape.s == 'rect'){
+        if(x > shape.x && x < shape.x+shape.width && y > shape.y && y < shape.y + shape.height){
+          color = shape.color;
+        }
+      }
+      if(shape.s == 'circle'){
+        if(x > shape.x && x < shape.x+shape.radius && y > shape.y && y < shape.y + shape.radius){
+          if(((((x-shape.x)-((shape.radius)/2))**2) + (((y-shape.y)-(shape.radius)/2))**2) <(shape.radius/2)**2) {
+            color = shape.color;
+          }
+        }
+      }
+    }
+    return color;
+  }
+
+  let canvas = new Canvas(1400,1400);
+  for(let i = 0; i < canvas.h; i++){
+    for(let k = 0; k < canvas.w; k++){
+      let [r,g,b] = pixel(i,k,shapes)
+      canvas.setPixel(i,k,r,g,b,255);
+    }
+  }
+  canvas.setPixels();
+
+
+</script>

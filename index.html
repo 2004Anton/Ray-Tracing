@@ -1,0 +1,58 @@
+<body>
+  Click to add a div
+
+</body>
+
+<style>
+
+  div {
+    background: rgb(255,255,0);
+  }
+  .x {
+    width: 100px;
+    height: 100px;
+  }
+
+</style>
+
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+<script>
+  function randint(n){
+    return Math.floor(n*Math.random());
+  }
+  function randomrgb(){
+    return [randint(256),randint(256),randint(256)];
+  }
+  function adddiv(i){
+    let [r,g,b] = randomrgb();
+    let color = '';
+
+    if (r + g + b < 128){
+      color = 'background: white';
+    } else {
+      color = 'background: rgb(' + r + ", " + g + ", " + b + ")";
+    }
+    console.log(color);
+    let div = '<div class="x" style="' + color + '" >i am a div, My number is:' + (i + 1) + '</div>';
+    jQuery('body').append(div);
+  }
+  //let i = 0;
+  jQuery(window).click(adddiv)  ;
+
+
+
+  // let col = 6;
+  // let row = 4;
+  // let str = "";
+  // for(let i = 0; i < row; i++){
+  //   str += '<tr>';
+  //   for(let k = 0; k < col; k++){
+  //     str+= '<td>' + i + ',' + k + '</td>' ;
+  //   }
+  //   str += '</tr> \n';
+  // }
+  // console.log(str);
+  // jQuery('table').html(str);
+
+
+</script>

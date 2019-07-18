@@ -1,0 +1,56 @@
+<body>
+</body>
+<style>
+  canvas{
+    background: white;
+    margin: 10px;
+  }
+</style>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+<script>
+  class Canvas {
+    constructor(w, h) {
+      [this.w, this.h] = [w, h];
+      this.canvas = document.createElement("canvas");
+      this.canvas.width = this.w;
+      this.canvas.height = this.h;
+
+      document.querySelector('body').append(this.canvas);
+      this.ctx = this.canvas.getContext('2d');
+      this.imageData = this.ctx.getImageData(0, 0, this.w, this.h);
+      this.data = this.imageData.data;
+    }
+    setPixel(x, y, r, g, b, a) {
+      let index = 4 * (y * this.w + x);
+      [this.data[index], this.data[index + 1], this.data[index + 2], this.data[index + 3]] = [r, g, b, a];
+    }
+    setPixels() {
+      this.ctx.putImageData(this.imageData, 0, 0);
+    }
+  }
+
+  let canvas = new Canvas(300, 300);
+
+  function pixel(i, j) {
+    if (i + j & 1) return [127, 127, 127];
+    return [255, 255, 255];
+  }
+
+  for (let i = 0; i < canvas.h; i++) {
+    for (let j = 0; j < canvas.w; j++) {
+      let [r, g, b] = pixel(i, j);
+      canvas.setPixel(j, i, r, g, b, 255);
+    }
+  }
+
+  canvas.setPixels();
+  //50% 127,127,127
+  //25% 64,64,64
+  //75% 192,192,192
+  let d = document.createElement("div");
+  d.style.background = "rgb(192,192,192)";
+  d.style.width = 100;
+  d.style.height = 100;
+  document.querySelector('body').append(d);
+
+</script>

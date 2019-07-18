@@ -1,0 +1,48 @@
+<body>
+  <table>
+
+  </table>
+</body>
+<style>
+
+  tr, td{
+    width: 1px;
+    height: 1px;
+    border: 0px;
+
+  }
+</style>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+<script>
+  function checkerboard(size){
+    let body = document.querySelector('body');
+    let tab = document.createElement('table');
+    for(let i = 0; i < size; i++){
+      let row = document.createElement('tr');
+      for(let k = 0; k < size; k++){
+        let temp = i+k;
+        //console.log(temp&1)
+        if((temp & 1) == 1){
+          let cell = document.createElement('td')
+          cell.style.background = 'rgb(100,100,100)';
+          row.appendChild(cell);
+
+        }
+        else{
+          let cell = document.createElement('td')
+          cell.style.background = 'rgb(0,0,0)';
+          row.appendChild(cell);
+
+        }
+      }
+      tab.appendChild(row);
+    }
+    body.appendChild(tab);
+    //return str;
+  }
+  function addDiv(width, height){
+    jQuery('body').append('<div style="width:' + width + ', height:' + height + '"></div>');
+  }
+  checkerboard(100);
+  //document.querySelector('table').append(str);
+</script>

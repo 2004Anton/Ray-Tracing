@@ -1,0 +1,33 @@
+<body>
+
+</body>
+<script>
+  class Canvas {
+    constructor(w, h) {
+      [this.w, this.h] = [w, h];
+      this.canvas = document.createElement("canvas");
+      this.canvas.width = this.w;
+      this.canvas.height = this.h;
+
+      document.querySelector('body').append(this.canvas);
+      this.ctx = this.canvas.getContext('2d');
+      this.imageData = this.ctx.getImageData(0, 0, this.w, this.h);
+      this.data = this.imageData.data;
+    }
+    setPixel(x, y, r, g, b, a) {
+      let index = 4 * (y * this.w + x);
+      [this.data[index], this.data[index + 1], this.data[index + 2], this.data[index + 3]] = [r, g, b, a];
+    }
+    setPixels() {
+      this.ctx.putImageData(this.imageData, 0, 0);
+    }
+  }
+
+  let canvas = new Canvas(300, 300);
+  for(let i = 0; i < canvas.w; i++){
+    for(let k = 0; k < canvas.h; k++){
+      canvas.setPixel(i,k,200,200,200 ,255);
+    }
+  }
+  canvas.setPixels();
+</script>

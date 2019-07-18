@@ -1,0 +1,67 @@
+<body>
+</body>
+<style>
+  tr, td {
+    width: 1px;
+    height: 1px;
+  }
+</style>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+<script>
+  function pixel(x, y, shapes){
+    let color = [0,0,0];
+    for(let i = 0; i < shapes.length; i++){
+      let shape = shapes[i];
+      if(shape.s == 'rect'){
+        if(x > shape.x && x < shape.x+shape.width && y > shape.y && y < shape.y + shape.length){
+          color = shape.color;
+        }
+      }
+      if(shape.s == 'circle'){
+        if(x > shape.x && x < shape.x+shape.radius && y > shape.y && y < shape.y + shape.radius){
+          if(((((x-shape.x)-((shape.radius)/2))**2) + (((y-shape.y)-(shape.radius)/2))**2) <(shape.radius/2)**2) {
+            return shape.color;
+          }
+        }
+      }
+    }
+    return color;
+  }
+  function screen_to_viewport(x,y,w,h){
+    if(l == 0 || w == 0){
+      return null;
+    }
+    return [x/w*2-1,1-(y)/h*2];
+  }
+  function unmap(point,w,l){
+    if(l == 0 || w == 0){
+      return null;
+    }
+    let mid = [(l)/2, (w)/2];
+    return [Math.round((point[0]*mid[0])+mid[0]),Math.round(-(point[1]*mid[1])+mid[1])]
+  }
+
+  function pixel2(x, y) {
+    if (x**2 + y**2 >= 1) return [0, 0, 255];
+    return [255, 255, 0];
+  }
+
+  let str = '';
+  let shapes = [{s: 'rect', x: 10, y: 10, length: 20, width: 10, color: [255,0,255]},
+                {s: 'rect', x: 50, y: 500, length: 20, width: 20, color: [255,0,255]},
+                {s: 'circle', x: 50, y: 20, radius: 10, color:[100,100,255]}];
+  let pixelWidth = 1000;
+  let pixelLength = 1000;
+  for(let i = 0; i < pixelWidth; i++){
+    str = str + "<tr>";
+    for(let k = 0; k < pixelLength; k++){
+      let [r,g,b] = pixel2(i,k);
+      let cell = 'rgb(' + r + ", " + g + ", " + b + ");";
+      str = str + '<td style="background: ' + cell + '"> </td>';
+    }
+    str = str+ "</tr>";
+  }
+  jQuery('body').append(str);
+
+
+</script>

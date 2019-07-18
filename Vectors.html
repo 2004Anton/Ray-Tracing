@@ -1,0 +1,39 @@
+<body>
+
+</body>
+
+
+<script>
+  function scale(v, s) {
+    return [s * v[0], s * v[1], s * v[2]];
+  }
+  function add(u, v) {
+      return [u[0] + v[0], u[1] + v[1], u[2] + v[2]];
+  }
+  function sub(u, v) {
+    return [u[0] - v[0], u[1] - v[1], u[2] - v[2]];
+  }
+  function len(v) {
+    return Math.sqrt(v[0]**2 + v[1]**2 + v[2]**2);
+  }
+
+  function norm(v) {
+      return scale(v, 1/len(v));
+  }
+  function dot(u,v) {
+    return u[0] * v[0] + u[1] * v[1] + u[2] * v[2];
+  }
+  function len2(v){
+    return Math.sqrt(dot(v,v));
+  }
+  function ray_intersect_shpere(g,d,s,r){
+    let x = sub(g, s);
+    let a = dot(d, d);
+    let b = 2 * dot(x, d);
+    let c = dot(x,x) - r**2;
+    let discr = b**2 - 4 * a * c;
+    if (discr < 0) return Infinity;
+    let t = (-b - Math.sqrt(discr)) / (2 * a);
+    return t;
+  }
+</script>

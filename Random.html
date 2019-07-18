@@ -1,0 +1,47 @@
+<body>
+
+</body>
+<script>
+  function random(a,b){
+    return Math.floor((Math.random() * (b-a+1))) + a;
+  }
+  let p = 0;
+  for(let i = 0; i < 1000; i++){
+    p = p + Math.floor(Math.random() * 6 + 1);
+  }
+  p = p/1000;
+  function snakeEyes(flip){
+    let count = 0;
+    for(let i = 0; i < flip; i++){
+      if(Math.floor(Math.random() * 6 +1) == 1 && Math.floor(Math.random() * 6 + 1) == 1){
+        count = count + 1;
+      }
+    }
+    count = count/flip;
+    return count;
+  }
+  console.log(snakeEyes(100000000));
+  function flipCoins(c) {
+    let count = 0;
+    for(let i = 0; i < c; i++){
+      if(Math.floor(Math.random() * 2) == 1){
+        count = count + 1;
+      }
+    }
+    if(count == c){
+      return 1;
+    }
+    return 0;
+  }
+  function flips(){
+    let count = 0;
+    for(let i = 0; i < 1000; i ++){
+      count = count + flipCoins(5);
+    }
+    return count/1000;
+  }
+  function randomNamePick(names){
+    let index = Math.floor(Math.random() * names.length);
+    return names[index];
+  }
+</script>

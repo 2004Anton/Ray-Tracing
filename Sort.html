@@ -1,0 +1,59 @@
+<script>
+  function bubble(a) {
+      let sorted = true;
+      for (let i = 0; i < a.length - 1; i++) {
+          if (a[i] > a[i + 1]) {
+            sorted = false;
+            let temp = a[i];
+            a[i] = a[i+1];
+            a[i+1] = temp;
+            // swap a[i] and a[i + 1]
+            //bubble switches the numbers next to each other
+            // you have to run bubble multiple times in order to sort an array
+          }
+      }
+      return sorted;
+  }
+  function bubbleSort(a){
+    while(!bubble(a)){
+    }
+    return a;
+  }
+  function selectionSort(a) {
+    for (let i = 0; i < a.length; i++) {
+        // Elements 0...i-1 are the smallest i elements in the array.
+        // Now find the next smallest element.
+        let min = Infinity;
+        for (let j = i; j < a.length; j++) {
+            if (a[j] < min){
+               min = a[j];
+              let temp = a[i];
+              a[i] = a[j];
+              a[j] = temp;
+              // swap a[i] and a[j]
+            }
+        }
+    }
+  }
+  function test(a){
+    console.log('----');
+     console.log('input ', a);
+     selectionSort(a);
+     console.log('output', a);
+     let ordered = true;
+     for (let i = 0; i < a.length - 1; i++) {
+         if (a[i] > a[i + 1]) ordered = false;
+     }
+     console.log('is ordered:', ordered);
+  }
+  test([8, 2, 5, 7, 1, 7, 22]);
+  test([1, 2, 3, 4, 5]);
+  test([5, 4, 3, 2, 1]);
+  test([100, 100, 100, 100, 100, 100]);
+
+  let a = [];
+  for (let i = 0; i < 100; i++) {
+      a[i] = Math.floor(Math.random() * 9000) + 1000;
+  }
+  test(a);
+</script>

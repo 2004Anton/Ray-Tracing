@@ -1,0 +1,46 @@
+<body>
+The ceaser cipher of <input id="input" value="Hello, world!"> is <span id="output"></span>
+</body>
+<style>
+  span {
+    font-size: large;
+  }
+</style>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+<script>
+  let alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
+  let encryption = 'NOPQRSTUVWXYZABCDEFGHIJKLMnopqrstuvwxyzabcdefghijklm'
+  function encrypt(s){
+    let ans = '';
+    for(let i = 0; i < s.length; i++){
+      let pos = alphabet.indexOf(s[i]);
+      if (pos > -1) {
+        ans = ans + encryption[pos];
+      }
+      else{
+        ans = ans + s[i];
+      }
+    }
+    return ans;
+  }
+  function decrypt(s){
+    let ans = '';
+    for(let i = 0; i < s.length; i++){
+      let pos = encryption.indexOf(s[i]);
+      if (pos > -1) {
+        ans = ans + alphabet[pos];
+      }
+      else{
+        ans = ans + s[i];
+      }
+    }
+    return ans;
+  }
+  function update() {
+    // You can get/set the text of most elements using .text(), but <input> elements use .val().
+    let input = $('#input').val();
+    $('#output').text(encrypt(input));
+  }
+  update();
+  $('#input').keyup(update);
+</script>
