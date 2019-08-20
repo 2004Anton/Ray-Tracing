@@ -5,19 +5,13 @@
   let eps = 1e-10;
   let debug = false;
   let shapes = [
-    {s: 'sphere', c: [-3, 0, -3], r: 1, color: [200, 100, 100]},
-    {s: 'sphere', c: [0, 1, -5], r: 2, color: [0, 0, 255]},
-    //{s: 'sphere', c: [0,1,-3], r: 2, color: [255,0,0]},
-    //{s: 'sphere', c: [8,8,5], r: 0, color: [255,0,0]},
-    //{s: 'sphere', c: [0,1,-5], r: 2, color: [255,0,0]},
-    {s: 'plane', n: [0,1,0], d: -1, color: [255,200,200]},
-    //{s: 'disk', x: 0.25, y: 0.25, r: 0.25, color: [255, 128, 0]},
-    //{s: 'disk', x: 0.75, y: 0.5, r: 0.5, color: [255, 0, 0]},
-    //{s: 'disk', x: 0.25, y: 0.25, r: 0.6, color: [0, 128, 0]},
-    //{s: 'disk', x: -1, y: 0.25, r: 0.6, color: [0, 200, 0]},
-    //{s: 'rect', x: -0.5, y: -0.75, w: 1, h: 1.5, color: [200, 100, 200]},
+    {s: 'sphere', reflect: 0.9, c: [-3, 0, -3], r: 1, color: [200, 100, 100]},
+    {s: 'sphere',reflect: 0.5 , c: [0, 1, -5], r: 2, color: [0, 0, 255]},
+
+    {s: 'plane',reflect: 0, n: [0,1,0], d: -1, color: [255,200,200]},
+
   ];
-  let light = [[-10,8,-5]];
+  let light = [[1,10,10]];
   function ray_intersect_shpere(g,d,s,r){
     let x = sub(g, s);
     let a = dot(d, d);
@@ -88,71 +82,25 @@
     let distance = Math.sqrt((light[0]-g[0])**2 + (light[1]-g[1])**2 + (light[2]-g[2])**2);
     return distance;
   }
-  // function ray_color(g,d){
-  //   //console.log(d);
-  //   let color = [0,0,0];
-  //   let temp = [0,0,0]
-  //   let s = intersect(g,d);
-  //   if(s.t < Infinity && s.t > eps){
-  //     for(let k = 0; k < light.length; k++){
-  //       let point = add(g,scale(d,s.t));
-  //       let shape = shapes[s.i];
-  //       let ldir = norm(sub(light[k], point));
-  //       let lhit = intersect(point, ldir);
+/*function ray_color(g,d,count = 0){
+  let color = [0,0,0];
+  let temp = [0,0,0]
+  let s = intersect(g,d);
+  //console.log(d);
+  let shape = shapes[s.i];
   //
-  //       if(debug) console.log(`ldir ${ldir}, lhit ${lhit.t}`);
-  //       if(debug) console.log('normal vector', s.n);
-  //       //console.log(lhit);
-  //       let shade = shading(g,d,s.t,s.n,light[k]);
-  //       let temp = scale(shape.color,shade);
-  //       let counter = 0;
-  //       for(let i = 0; i < temp.length; i++){
-  //         if(temp[i] < 0){
-  //           counter++;
-  //         }
-  //       }
-  //       if(counter == 0){
-  //         color = temp;
-  //       }
-  //       if(lhit.t != Infinity){
-  //         let point2 = add(point,scale(ldir,lhit.t));
-  //         let distance_light = distance_to_light(point2,ldir,light[k]);
-  //         let scal = Math.min(1,lhit.t/distance_light);
-  //         //console.log(scal);
-  //         color = scale(color,scal);
-  //       }
-  //       //console.log(shape.color);
-  //       //console.log(color);
-  //     }
-  //   }
-  //   return color;
-  // }
-
-  function ray_color(g,d){
-    //console.log(d);
-    let color = [0,0,0];
-    let temp = [0,0,0]
-    let s = intersect(g,d);
-    if(s.t < Infinity && s.t > eps){
+  if(s.t < Infinity && s.t > eps){
+    if(shape.reflect == 1){
       for(let k = 0; k < light.length; k++){
         let point = add(g,scale(d,s.t));
-        let shape = shapes[s.i];
         let ldir = norm(sub(light[k], point));
         let lhit = intersect(point, ldir);
-
         if(debug) console.log(shapes[s.i].s, `ldir ${ldir}, lhit ${lhit.t}`);
         if(debug) console.log('normal vector', s.n);
         //console.log(lhit);
         let shade = shading(g,d,s.t,s.n,light[k]);
-        let tempt = scale(shape.color,shade);
-        let counter = 0;
-        for(let i = 0; i < tempt.length; i++){
-          if(tempt[i] < 0){
-            counter++;
-          }
-        }
-        if(counter == 0){
-          temp = tempt;
+        if(shade > 0){
+          let temp = scale(shape.color,shade);
           if(lhit.t != Infinity){
             let point2 = add(point,scale(ldir,lhit.t));
             let distance_light = distance_to_light(point2,ldir,light[k]);
@@ -169,8 +117,95 @@
         }
       }
     }
-    return color;
+
+    else{
+      if(count < 10){
+        let point = add(g,scale(d,s.t));
+        let inverse_ray = norm(scale(d,-1));
+        let p = scale(s.n,dot(s.n,inverse_ray));
+        let x = sub(inverse_ray,p);
+        let new_d = sub(inverse_ray,scale(x,2));
+        if(debug){
+          debug = false;
+          console.log("curColor: ", ray_color(point,new_d,count+1));
+          debug = true;
+          console.log("new_d: ",new_d);
+          console.log("x: ",x);
+          console.log("s.n",s.n);
+          console.log("p: ", p);
+          //console.log(dot(s.n,inverse_ray));
+          console.log("curRay",d);
+          console.log("inverse_ray", inverse_ray);
+          console.log("point",point);
+        }
+        return(ray_color(point,new_d,count+1));
+      }
+    }
   }
+  return color;
+}*/
+function ray_color(g,d,count = 0){
+  let color = [0,0,0];
+  let temp = [0,0,0]
+  let s = intersect(g,d);
+  let shape = shapes[s.i];
+  let shade =1;
+  let shadow = 1;
+  if(s.t < Infinity && s.t > eps){
+      for(let k = 0; k < light.length; k++){
+        let point = add(g,scale(d,s.t));
+        let ldir = norm(sub(light[k], point));
+        let lhit = intersect(point, ldir);
+        let tempColor = shape.color;
+        if(shape.reflect != 0){
+          if(count < 10){
+            let inverse_ray = norm(scale(d,-1));
+            let p = scale(s.n,dot(s.n,inverse_ray));
+            let x = sub(inverse_ray,p);
+            let new_d = sub(inverse_ray,scale(x,2));
+            if(debug){
+              debug = false;
+              console.log("curColor: ", ray_color(point,new_d,count+1));
+              debug = true;
+              console.log("new_d: ",new_d);
+              console.log("x: ",x);
+              console.log("s.n",s.n);
+              console.log("p: ", p);
+              //console.log(dot(s.n,inverse_ray));
+              console.log("curRay",d);
+              console.log("inverse_ray", inverse_ray);
+              console.log("point",point);
+            }
+            tempColor = add(scale(ray_color(point,new_d,count+1),shape.reflect),scale(shape.color,1-shape.reflect));
+          }
+        }
+        if(debug) console.log(shapes[s.i].s, `ldir ${ldir}, lhit ${lhit.t}`);
+        if(debug) console.log('normal vector', s.n);
+        //console.log(lhit);
+        let shade = shading(g,d,s.t,s.n,light[k]);
+        if(shade > 0){
+          //let temp = scale(tempColor,shade);
+          if(lhit.t != Infinity){
+            let point2 = add(point,scale(ldir,lhit.t));
+            let distance_light = distance_to_light(point2,ldir,light[k]);
+            shade = shade * Math.min(1,lhit.t/distance_light);
+            //console.log(scal);
+            //temp = scale(temp,scal);
+          }
+          let temp = scale(tempColor,shade);
+          if(len(temp) > len(color)){
+            color = temp;
+          }
+          //console.log(shape.color);
+          //console.log(color);
+        }
+      }
+      return color;
+  }
+  else{
+    return [200,200,200];
+  }
+}
 
   function rect2(x,y){
     if(x > rect.x-rect.width && x < rect.x && y > rect.y &&  y  < rect.y + rect.height ){
@@ -216,7 +251,7 @@
     return Math.sqrt(dot(v,v));
   }
 
-  function pixel(coordinates,width,height) {
+  function pixel(coordinates) {
     [x,y] = coordinates;
     let g = [0,0,0];
     let d = norm([x,y,-1]);
@@ -247,12 +282,11 @@
     }
 
     let canvas = new Canvas(500,500);
-
-    function frame(time){
+    /*function frame(time){
       let x = 10*Math.cos(time);
       let y = 10*Math.sin(time) -5;
       light[0] = [x, light[0][1],y];
-      console.log(light[0]);
+      //console.log(light[0]);
       for(let i = 0; i < canvas.h; i++){
         for(let k = 0; k < canvas.w; k++){
           let [r,g,b] = pixel(screen_to_viewport(i,k,canvas.w,canvas.h),canvas.w,canvas.h);
@@ -263,16 +297,31 @@
     }
     let time = 0;
     setInterval(function(){frame(time+=0.01)}, 10);
-
-    /*
-    for(let i = 0; i < canvas.h; i++){
-      for(let k = 0; k < canvas.w; k++){
-        let [r,g,b] = pixel(screen_to_viewport(i,k,canvas.w,canvas.h),canvas.w,canvas.h);
-        canvas.setPixel(i,k,r,g,b,255);
-      }
-    }
-    canvas.setPixels();
     */
+    function loadFrame(){
+      for(let i = 0; i < canvas.h; i++){
+        for(let k = 0; k < canvas.w; k++){
+          let colorAvg = [0,0,0];
+          //let [r,g,b] = pixel(screen_to_viewport(i,k,canvas.w,canvas.h));
+
+          for(let ii = 0; ii < 4; ii++){
+            for(let kk= 0; kk < 4; kk++){
+              let randomX = Math.random()/4;
+              let randomY = Math.random()/4;
+              let rgb = pixel(screen_to_viewport(i+ii/4+randomX,k+kk/4+randomY,canvas.w,canvas.h));
+              colorAvg = add(colorAvg,rgb);
+              //canvas.setPixel(i,k,r,g,b,255);
+            }
+          }
+          //let [r,g,b] = pixel(screen_to_viewport(i+randomX-1/2,k+randomY  -1/2,canvas.w,canvas.h),canvas.w,canvas.h);
+          let [r,g,b] = scale(colorAvg,1/16);
+
+          canvas.setPixel(i,k,r,g,b,255);
+        }
+      }
+      canvas.setPixels();
+    }
+    loadFrame();
     $('canvas').click(event => {
       debug = true;
       console.clear();

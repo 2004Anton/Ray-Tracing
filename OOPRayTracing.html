@@ -1,0 +1,374 @@
+<html></html>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+<script>
+  let eps = 1e-10;
+  class Canvas {
+    constructor(w, h) {
+      [this.w, this.h] = [w, h];
+      this.canvas = document.createElement("canvas");
+      this.canvas.width = this.w;
+      this.canvas.height = this.h;
+
+      document.querySelector('body').append(this.canvas);
+      this.ctx = this.canvas.getContext('2d');
+      this.imageData = this.ctx.getImageData(0, 0, this.w, this.h);
+      this.data = this.imageData.data;
+    }
+    setPixel(x, y, r, g, b, a) {
+      let index = 4 * (y * this.w + x);
+      [this.data[index+0], this.data[index + 1], this.data[index + 2], this.data[index + 3]] = [r, g, b, a];
+    }
+    setPixels() {
+      this.ctx.putImageData(this.imageData, 0, 0);
+    }
+  }
+  class Shape{
+    constructor(color,name){
+      this.name = name;
+      this.color = color;
+      this.reflect = 0;
+      this.velocity = new Point(0,0,0);
+      this.gravity = false;
+    }
+    shade(g,d,curLight,t,n){
+      let m = curLight.sub(g.add(d.scale(t))).norm();
+      //console.log(n);
+      return  n.dot(m);
+    }
+    set_reflect(reflect){
+      this.reflect = reflect;
+      return this;
+    }
+    set_movement(velocity){
+      this.velocity = velocity;
+      return this;
+    }
+    set_gravity(g){
+      this.gravity = g;
+      return this;
+    }
+  }
+  class Sphere extends Shape{
+    constructor(center,radius,color){
+      super(color,'sphere');
+      this.center = center;
+      this.radius = radius;
+    }
+    intersect(g,d){
+      let x = g.sub(this.center);
+      let a = d.dot(d);
+      //console.log(a);
+      let b = 2*d.dot(x);
+      let c = x.dot(x)-this.radius**2;
+      let discr = b**2-(4*a*c);
+      if(discr<0){
+        return new info(null,Infinity,this);
+      }
+      let t = (-b - Math.sqrt(discr)) / (2 * a);
+      //let pt = g.add(d.scale(t))
+      let n = ((d.scale(t)).add(g)).sub(this.center).norm();
+      //console.log(n);
+      //console.log(t);
+      return new info(n,t,this);
+    }
+    collide(o){
+      if(o.name == 'sphere'){
+        //let len = o.center.sub(this.center).len();
+        let dir = o.center.sub(this.center).norm();
+        let inf = o.intersect(this.center,dir);
+        return new info(inf.n,Math.abs(inf.t)-this.radius-o.radius,inf.s);
+      }
+      if(o.name == 'plane'){
+        let dir = o.n.scale(this.center.norm().dot(o.n)).norm();
+        let inf = o.intersect(this.center,dir)
+        //console.log(inf.t-this.radius);
+        //console.log("INFO",Math.abs(inf.t-this.radius));
+        return new info(inf.n,Math.abs(inf.t)-this.radius,inf.s);
+      }
+    }
+    move(shapes){
+      //console.log(this.gravity);
+      if(this.gravity==true){
+        let grav_vec = new Point(0,-1,0);
+        let grav_amount = gravity;
+        for(let i = 0; i < shapes.length;i++){
+          let collision = this.collide(shapes[i]);
+          if(shapes[i] != this && collision.t <= 0 && collision.s.name != 'sphere'){
+            //console.log("collision.n",collision.n,grav_vec);
+            let temp = collision.n.dot(grav_vec);
+            //console.log("temp",temp);
+            if(temp >0){
+              grav_amount = Math.min(grav_amount,temp*grav_amount);
+            }
+            else{
+              grav_amount = 0;
+            }
+          }
+        }
+        if(grav_amount == gravity){
+          let new_velocity = this.velocity.add(grav_vec.scale(grav_amount));
+          this.set_movement(new_velocity);
+        }
+        else{
+          this.set_movement(new Point(0,-grav_amount,0));
+        }
+      }
+      if(this.velocity.x != 0 || this.velocity.y != 0 || this.velocity.z != 0){
+        let moved_sphere= new Sphere(this.center,this.radius,this.color);
+        moved_sphere.center = moved_sphere.center.add(this.velocity.scale(2/fps));
+        //console.log("Moved",  moved_sphere.center,this.center);
+        for(let i = 0; i < shapes.length; i++){
+          let collision = moved_sphere.collide(shapes[i]);
+          if(shapes[i] != this && collision.t<=0.0 && collision.s.name != 'sphere'){
+            //console.log(collision.t);
+            let cur_info = this.collide(shapes[i]);
+            let new_n = cur_info.n.scale(-1);
+            //console.log("CUR_INFO",cur_info);
+            //console.log("velocity length",this.velocity.len());
+            let scale_factor = Math.abs(cur_info.t/cur_info.n.dot(this.velocity.norm())/(this.velocity.len()/fps));
+            //console.log(scale_factor)
+            //console.log("scale",scale_factor);
+            if(scale_factor < eps|| this.velocity.len() < eps){
+              //console.log("H");
+              this.velocity = new Point(0,0,0);
+            }
+            //console.log(scale_factor);
+            else{this.set_movement(this.velocity.scale(scale_factor))};
+          }
+        }
+      }
+    }
+  }
+  class Plane extends Shape{
+    constructor(n,d,color){
+      super(color,'plane');
+      this.n = n;
+      this.d = d;
+    }
+    intersect(g,d){
+      let a = this.d- g.dot(this.n);
+      let b = this.n.dot(d);
+      if(b==0){
+        return new info(this.n,Infinity,this);
+      }
+      return new info(this.n,a/b,this);
+    }
+  }
+  class info{
+    constructor(n,t,s){
+      this.n = n;
+      this.t = t;
+      this.s = s;
+    }
+
+  }
+  class Point{
+    //var p = [x: 0, y: 0,z:0];
+    constructor(x,y,z){
+      this.x = x;
+      this.y = y;
+      this.z = z;
+      //console.log(x,y,z);
+    }
+    dot(v){
+      //console.log(v.x*this.x);
+      return v.x*this.x + v.y*this.y + v.z*this.z;
+    }
+    len(){
+      return Math.sqrt(this.dot(this));
+    }
+    scale(s){
+      return new Point(this.x*s,this.y*s,this.z*s);
+    }
+    add(v){
+      return new Point(this.x+v.x,this.y+v.y,this.z+v.z);
+    }
+    sub(v){
+      return new Point(this.x-v.x,this.y-v.y,this.z-v.z);
+    }
+    norm(){
+      return this.scale(1/this.len());
+    }
+  }
+  function distance_to_light(g,light){
+    let distance = light.sub(g).len();//Math.sqrt((light[0]-g[0])**2 + (light[1]-g[1])**2 + (light[2]-g[2])**2);
+    return distance;
+  }
+  function screen_to_viewport(x, y, w, h) {
+    let m = Math.max(w,h);
+    //console.log(w,h);
+    return [x / m * 2 - 1, 1 - y / m * 2];
+  }
+  function intersects(g,d,shapes){
+    let s = new info(null,Infinity,null);
+    for(let i = 0; i < shapes.length; i++){
+      let temp = shapes[i];
+      //console.log("here");
+      let b = temp.intersect(g,d);
+      if(b.t <s.t && b.t > 1e-10){
+        s = b;
+      }
+    }
+    return s;
+  }
+  function ray_color(g,d,shapes,count = 0){
+    let color = new Point(0,0,0);
+    let shape_info = intersects(g,d,shapes);
+    let shape_t = shape_info.t;
+    let shape = shape_info.s;
+    let shape_n = shape_info.n;
+    let shade =1;
+    let shadow = 1;
+    if(shape_t < Infinity && shape_t > eps){
+        for(let k = 0; k < light.length; k++){
+          let point1 = g.add(d.scale(shape_t));
+          let ldir = light[k].sub(point1).norm();
+          let lhit = intersects(point1, ldir,shapes);
+          let tempColor = shape.color;
+          if(shape.reflect != 0){
+            if(count < 10){
+              let inverse_ray = d.scale(-1).norm();
+              let p = shape_n.scale(shape_n.dot(inverse_ray));
+              let x = inverse_ray.sub(p);
+              let new_d = inverse_ray.sub(x.scale(2));
+              if(debug){
+                debug = false;
+                console.log("curColor: ", ray_color(point1,new_d,count+1,shapes));
+                debug = true;
+                console.log("new_d: ",new_d);
+                console.log("x: ",x);
+                console.log("s.n",s.n);
+                console.log("p: ",p);
+                //console.log(dot(s.n,inverse_ray));
+                console.log("curRay",d);
+                console.log("inverse_ray", inverse_ray);
+                console.log("point",point1);
+              }
+              //console.log(new_d);
+              //console.log(ray_color(point1,new_d,count+1).scale(shape.reflect));
+              tempColor = ray_color(point1,new_d,shapes,count+1).scale(shape.reflect).add(shape.color.scale(1-shape.reflect));
+            }
+          }
+          if(debug) console.log(shapes[s.i].s, `ldir ${ldir}, lhit ${lhit.t}`);
+          if(debug) console.log('normal vector', s.n);
+          //console.log(lhit);
+          let shade = shape.shade(g,d,light[k],shape_t,shape_n);
+          if(shade > 0){
+            //let temp = scale(tempColor,shade);
+            if(lhit.t != Infinity){
+              let point2 = point1.add(ldir.scale(lhit.t));
+              let distance_light = distance_to_light(point2,light[k]);
+              shade = shade * Math.min(1,lhit.t/distance_light);
+              //console.log(shade);
+              //console.log(scal);
+              //temp = scale(temp,scal);
+            }
+            let temp = tempColor.scale(shade);
+            if(temp.len() > color.len()){
+              color = temp;
+            }
+            //console.log(shape.color);
+            //console.log(color);
+          }
+        }
+        //console.log(color);
+        return color;
+    }
+    else{
+      return new Point(200,200,200);
+    }
+  }
+  $('canvas').click(event => {
+    debug = true;
+    console.clear();
+    console.log(event);
+    console.log(event.offsetX + ' ' + event.offsetY);
+    let rgb = pixel(screen_to_viewport(event.offsetX,event.offsetY, canvas.w, canvas.h));
+    console.log('rgb:', rgb);
+    debug = false;
+  });
+  let gravity = 0.2 ;
+  let light = [new Point(1,10,10)];
+  let shapes = [(new Sphere(new Point(-3,0,-3),1,new Point(200,0,100))).set_reflect(1).set_movement(new Point(0,0,0)),
+              new Sphere(new Point(0,2,-5),2,new Point(0,0,255)).set_movement(new Point(0.01,0,0)).set_gravity(true),
+              new Plane(new Point(0,1,0).norm(),-3,new Point(200,200,100))];
+  let c = new Canvas(500,500);
+  let origin = new Point(0,0,0);
+  let debug = false;
+  //console.log(c.width,c.length);
+  let anti_alias = 1;
+  let motion_blur = 5;
+  let fps = 10;
+  let vert_adjust = 0;
+  let horiz_adjust = 0
+  function frame(time){
+    shapes[1].move(shapes);
+    shapes[1].center = shapes[1].center.add(shapes[1].velocity.scale(1/fps));
+
+    for(let i = 0; i < c.w; i++){
+      for(let k = 0; k< c.h;k++){
+        let color = new Point(0,0,0);
+        for(let ii = 0; ii < anti_alias; ii++){
+          for(let kk = 0; kk < anti_alias;kk++){
+            let randomX = Math.random()/anti_alias;
+            let randomY = Math.random()/anti_alias;
+            let [x,y] = screen_to_viewport(i+ii/anti_alias+randomX,k+kk/anti_alias+randomY,c.w,c.h);
+            let dir = new Point(x,y,-1).norm();
+            color = color.add(ray_color(origin,dir,shapes));
+          }
+        }
+        color = color.scale(1/anti_alias**2);
+        c.setPixel(i,k,color.x,color.y,color.z,255);
+      }
+    }
+    c.setPixels();
+  }
+  function frame1(time){
+    let pixels = [];
+    for(let i = 0; i < c.w;i++){
+      pixels[i] = [];
+      for(let k =0; k < c.h; k++){
+        pixels[i][k] = new Point(0,0,0);
+        //console.log(pixels[i][k]);
+      }
+    }
+    for(let t = 0; t < 1/fps; t+=1/motion_blur/fps){
+      let random_time = Math.random()*1/motion_blur/fps;
+      let cur_time = time + t + random_time;
+      for(let s = 0; s < shapes.length; s++){
+        if(shapes[s].velocity.x != 0 || shapes[s].velocity.y != 0 || shapes[s].velocity.z != 0){
+          shapes[s].center = shapes[s].center.add(shapes[s].velocity.scale(cur_time));
+        }
+      }
+      for(let i = 0; i < c.w; i++){
+        for(let k = 0; k< c.h;k++){
+          let color = new Point(0,0,0);
+          for(let ii = 0; ii < anti_alias; ii++){
+            for(let kk = 0; kk < anti_alias;kk++){
+              let randomX = Math.random()/anti_alias;
+              let randomY = Math.random()/anti_alias;
+              let [x,y] = screen_to_viewport(i+ii/anti_alias+randomX,k+kk/anti_alias+randomY,c.w,c.h);
+              let dir = new Point(x,y,-1).norm();
+              color = color.add(ray_color(origin,dir,shapes));
+            }
+          }
+          color = color.scale(1/anti_alias**2);
+          pixels[i][k] = pixels[i][k].add(color);
+        }
+      }
+    }
+    for(let i = 0; i < c.w; i++){
+      for(let k = 0; k < c.w; k++){
+        pixels[i][k] = pixels[i][k].scale(1/motion_blur);
+        c.setPixel(i,k,pixels[i][k].x,pixels[i][k].y,pixels[i][k].z,255);
+      }
+    }
+    c.setPixels();
+  }
+  function generate_time(time){
+
+  }
+  let t = 0;
+  //frame(0)
+  setInterval(function(){frame1(t+=1/fps)},1/fps);
+</script>
