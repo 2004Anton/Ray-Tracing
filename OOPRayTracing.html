@@ -1,7 +1,6 @@
 <html></html>
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
 <script>
-  let eps = 1e-10;
   class Canvas {
     constructor(w, h) {
       [this.w, this.h] = [w, h];
@@ -27,32 +26,34 @@
       this.name = name;
       this.color = color;
       this.reflect = 0;
-      this.velocity = new Point(0,0,0);
-      this.gravity = false;
       this.bounce = 0;
-      this.dead = false;
-      this.temp_movement_vector = new Point(0,0,0);
-      this.temp_hit = false;
+      this.motion = new Motion().set_dead(true);
+      this.backup = new Motion();
     }
     shade(g,d,curLight,t,n){
       let m = curLight.sub(g.add(d.scale(t))).norm();
-      //console.log(n);
       return  n.dot(m);
     }
     set_reflect(reflect){
       this.reflect = reflect;
       return this;
     }
-    set_movement(velocity){
-      this.velocity = velocity;
-      return this;
-    }
-    set_gravity(g){
-      this.gravity = g;
+    set_motion(motion){
+      this.motion = motion;
       return this;
     }
     set_bounce(b){
       this.bounce = b;
+      return this;
+    }
+    save_motion(){
+      this.backup = new Motion().set_movement(this.motion.velocity).set_gravity(this.motion.gravity).set_dead(this.motion.dead).set_tmv(this.motion.temp_movement_vector).set_th(this.motion.temp_hit);
+      this.backup.can_move = true;
+      console.log(this.backup);
+      return this;
+    }
+    reload_motion(){
+      this.motion = this.backup;
       return this;
     }
   }
@@ -61,6 +62,7 @@
       super(color,'sphere');
       this.center = center;
       this.radius = radius;
+      this.backup_center = new Point(0,0,0);
     }
     intersect(g,d){
       let x = g.sub(this.center);
@@ -82,100 +84,68 @@
         return new info(inf.n,Math.abs(inf.t)-this.radius,inf.s);
       }
       if(o.name == 'plane'){
-        //let dir = o.n.scale(this.center.norm().dot(o.n)).norm();
-
-        //console.log(o.n);
-        //console.log(dir);
         let inf = o.intersect(this.center,o.n)
-        //console.log(inf.t-this.radius);
-        //console.log("INFO",Math.abs(inf.t-this.radius));
         return new info(inf.n,Math.abs(inf.t)-this.radius,inf.s);
       }
     }
-    move(shapes){
-      //console.log(this.gravity);
-      if(this.temp_hit){
-        //console.log("tmv",this.temp_movement_vector);
-        this.set_movement(this.velocity.add(this.temp_movement_vector));
-        //if(this.temp_movement_vector.len() != 0){console.log(this.temp_movement_vector,this.velocity)};
-        //console.log(this.temp_movement_vector);
-        this.temp_movement_vector = new Point(0,0,0);
-        this.temp_hit = false;
+    save_motion(){
+      super.save_motion();
+      this.backup_center = new Point(this.center.x,this.center.y,this.center.z);
+    }
+    reload_motion(){
+      super.reload_motion();
+      this.center = this.backup_center;
+    }
+    move(shapes,additional_time = 1){
+      if(this.motion.temp_hit){
+        this.motion.set_movement(this.motion.velocity.add(this.motion.temp_movement_vector));
+        this.motion.temp_movement_vector = new Point(0,0,0);
+        this.motion.temp_hit = false;
       }
 
-      let z = true;
-      //console.log(this.velocity);
-      if(!this.dead){
+      //console.log(this.motion.can_move)
+      if(this.motion.can_move){
         let temp_amount = 1;
-        if(this.gravity==true&&z){
+        if(this.motion.gravity==true){
           let grav = new Point(0,-gravity,0).scale(1/fps);
           for(let i = 0; i < shapes.length; i++){
             if(shapes[i].name == 'plane'){
               let collision = this.collide(shapes[i]);
-              let t = Math.max(0,this.velocity.add(grav).len() * collision.n.scale(collision.s.d).norm().dot(this.velocity.norm())/fps);
+              let t = Math.max(0,this.motion.velocity.add(grav).len() * collision.n.scale(collision.s.d).norm().dot(this.motion.velocity.norm())/fps);
               if(collision.t-t<=0){
-              //let grav = new Point(0,-gravity,0);
-
-                //console.log(collision.t/grav.len());
                 temp_amount = Math.min(1,Math.max(0,collision.t/grav.len()));
                 grav = grav.scale(temp_amount);
               }
             }
           }
-          this.set_movement(this.velocity.add(grav));
-        //console.log("here");
+          this.motion.set_movement(this.motion.velocity.add(grav));
         }
-
-        let moved_sphere= new Sphere(this.center,this.radius,this.color);
-        moved_sphere.center = moved_sphere.center.add(this.velocity.scale(1/fps));
-
-        //console.log("Moved",  moved_sphere.center,this.center);
         for(let i = 0; i < shapes.length; i++){
 
           let collision = this.collide(shapes[i]);
           if(collision.s.name == 'plane'){
-            let t = Math.max(0,this.velocity.len() * collision.n.scale(collision.s.d).norm().dot(this.velocity.norm())/fps);
-            //console.log("velocity", this.velocity.len());
-            //console.log("t",t);
-            //console.log(collision);
-//          if(shapes[i] != this && collision.t<=0.0 && collision.s.name != 'sphere'){
+            let t = Math.max(0,this.motion.velocity.len() * collision.n.scale(collision.s.d).norm().dot(this.motion.velocity.norm())/fps);
             if(collision.t-t <= 0){
-              //console.log(collision.t);
               let cur_info = this.collide(shapes[i]);
-              let new_n = cur_info.n.scale(-1);
-              //console.log("CUR_INFO",cur_info);
-              //let add_grav = new Point(0,-gravity,0).scale(Math.max(0,cur_info.t -(gravity* cur_info.n.scale(cur_info.s.d).dot(this.velocity.norm()))));
-              //this.velocity.add(add_grav);
-              //console.log(add_grav);
-              //console.log("velocity length",this.velocity.len());
-              let scale_factor = Math.max(0,Math.min(1,(cur_info.t/new_n.dot(this.velocity.norm()))/(this.velocity.len()/fps)));
-              //console.log(scale_factor)
-              //console.log("scale",scale_factor);
-              //console.log(scale_factor);
-              //let grav = new Point(0,-gravity,0);
-              //let d = this.velocity.add(grav);
-
-              if(this.velocity.len() < eps){
-                this.set_movement(new Point(0,0,0));//this.velocity = new Point(0,0,0);
-                this.dead = true;
+              if(this.motion.velocity.len() < eps){
+                this.motion.set_movement(new Point(0,0,0));
+                this.motion.set_dead(true);
                 return;
               }
               else{
-                let inverse_ray = this.velocity.scale(-1).norm()
+                let inverse_ray = this.motion.velocity.scale(-1).norm()
                 let p = cur_info.n.scale(cur_info.n.dot(inverse_ray)).norm();
                 let x = inverse_ray.sub(p);
-                let new_ray = inverse_ray.sub(x.scale(2)).scale(this.velocity.len());
-                this.temp_movement_vector = new_ray.scale(temp_amount).scale(this.bounce);
-                this.set_movement(new_ray.scale(1-temp_amount).scale(this.bounce));
-                //console.log("SCALE",scale_factor);
-                this.temp_hit = true
-                console.log(new_ray);
+                let new_ray = inverse_ray.sub(x.scale(2)).scale(this.motion.velocity.len());
+                this.motion.temp_movement_vector = new_ray.scale(temp_amount).scale(this.bounce);
+                this.motion.set_movement(new_ray.scale(1-temp_amount).scale(this.bounce));
+                this.motion.temp_hit = true;
+                //console.log(new_ray);
               }
             }
           }
         }
       }
-      //console.log("vel",this.velocity);
     }
   }
   class Plane extends Shape{
@@ -193,6 +163,38 @@
       return new info(this.n,a/b,this);
     }
   }
+  class Motion{
+    constructor(){
+      this.can_move = false;
+      this.velocity = new Point(0,0,0);
+      this.gravity = false;
+      this.temp_movement_vector = new Point(0,0,0);
+      this.temp_hit = false;
+    }
+    set_movement(velocity){
+      this.can_move = true;
+      this.velocity = velocity;
+      return this;
+    }
+    set_gravity(g){
+      this.can_move = true;
+      this.gravity = g;
+      return this;
+    }
+
+    set_dead(d){
+      this.can_move = false;
+      return this;
+    }
+    set_tmv(tmv){
+      this.temp_movement_vector = tmv;
+      return this;
+    }
+    set_th(th){
+      this.temp_hit = th;
+      return this;
+    }
+  }
   class info{
     constructor(n,t,s){
       this.n = n;
@@ -202,15 +204,12 @@
 
   }
   class Point{
-    //var p = [x: 0, y: 0,z:0];
     constructor(x,y,z){
       this.x = x;
       this.y = y;
       this.z = z;
-      //console.log(x,y,z);
     }
     dot(v){
-      //console.log(v.x*this.x);
       return v.x*this.x + v.y*this.y + v.z*this.z;
     }
     len(){
@@ -229,20 +228,35 @@
       return this.scale(1/this.len());
     }
   }
+  //Variable Initialization
+  let eps = 1e-10;
+  let gravity = 9.8;
+  let light = [new Point(1,10,10)];
+  let shapes = [(new Sphere(new Point(-3,0,-3),1,new Point(200,0,100))),
+              new Sphere(new Point(-3,4,-6),2,new Point(0,0,255)).set_motion(new Motion().set_movement(new Point(1,-0.2,0)).set_gravity(true)).set_bounce(0.6),
+              new Plane(new Point(0.1,1,0).norm(),-1,new Point(200,200,100))];
+  let c = new Canvas(400,400);
+  let origin = new Point(0,0,0);
+  let debug = false;
+  let anti_alias = 1;
+  let motion_blur = 3;
+  let fps = 30;
+  let vert_adjust = 0;
+  let horiz_adjust = 0;
+  let rnd_factor = 100000;
+
   function distance_to_light(g,light){
-    let distance = light.sub(g).len();//Math.sqrt((light[0]-g[0])**2 + (light[1]-g[1])**2 + (light[2]-g[2])**2);
+    let distance = light.sub(g).len();
     return distance;
   }
   function screen_to_viewport(x, y, w, h) {
     let m = Math.max(w,h);
-    //console.log(w,h);
     return [x / m * 2 - 1, 1 - y / m * 2];
   }
   function intersects(g,d,shapes){
     let s = new info(null,Infinity,null);
     for(let i = 0; i < shapes.length; i++){
       let temp = shapes[i];
-      //console.log("here");
       let b = temp.intersect(g,d);
       if(b.t <s.t && b.t > 1e-10){
         s = b;
@@ -278,76 +292,110 @@
                 console.log("x: ",x);
                 console.log("s.n",s.n);
                 console.log("p: ",p);
-                //console.log(dot(s.n,inverse_ray));
                 console.log("curRay",d);
                 console.log("inverse_ray", inverse_ray);
                 console.log("point",point1);
               }
-              //console.log(new_d);
-              //console.log(ray_color(point1,new_d,count+1).scale(shape.reflect));
               tempColor = ray_color(point1,new_d,shapes,count+1).scale(shape.reflect).add(shape.color.scale(1-shape.reflect));
             }
           }
-          if(debug) console.log(shapes[s.i].s, `ldir ${ldir}, lhit ${lhit.t}`);
-          if(debug) console.log('normal vector', s.n);
-          //console.log(lhit);
+          // if(debug) console.log(shapes[s.i].s, `ldir ${ldir}, lhit ${lhit.t}`);
+          // if(debug) console.log('normal vector', s.n);
           let shade = shape.shade(g,d,light[k],shape_t,shape_n);
           if(shade > 0){
-            //let temp = scale(tempColor,shade);
             if(lhit.t != Infinity){
               let point2 = point1.add(ldir.scale(lhit.t));
               let distance_light = distance_to_light(point2,light[k]);
               shade = shade * Math.min(1,lhit.t/distance_light);
-              //console.log(shade);
-              //console.log(scal);
-              //temp = scale(temp,scal);
             }
             let temp = tempColor.scale(shade);
             if(temp.len() > color.len()){
               color = temp;
             }
-            //console.log(shape.color);
-            //console.log(color);
           }
         }
-        //console.log(color);
         return color;
     }
     else{
       return new Point(200,200,200);
     }
   }
-  $('canvas').click(event => {
-    debug = true;
-    console.clear();
-    console.log(event);
-    console.log(event.offsetX + ' ' + event.offsetY);
-    let rgb = pixel(screen_to_viewport(event.offsetX,event.offsetY, canvas.w, canvas.h));
-    console.log('rgb:', rgb);
-    debug = false;
-  });
-  let gravity = 9.8;
-  let light = [new Point(1,10,10)];
-  let shapes = [(new Sphere(new Point(-3,0,-3),1,new Point(200,0,100))).set_movement(new Point(0,0,0)),
-              new Sphere(new Point(0,4,-6),2,new Point(0,0,255)).set_movement(new Point(0,-0.2,0)).set_gravity(true).set_bounce(0.6),
-              new Plane(new Point(0.1,1,0).norm(),-1,new Point(200,200,100))];
-  let c = new Canvas(500,500);
-  let origin = new Point(0,0,0);
-  let debug = false;
-  //console.log(c.width,c.length);
-  let anti_alias = 1;
-  let motion_blur = 3;
-  let fps = 30;
-  let vert_adjust = 0;
-  let horiz_adjust = 0
+  // $('canvas').click(event => {
+  //   debug = true;
+  //   console.clear();
+  //   console.log(event);
+  //   console.log(event.offsetX + ' ' + event.offsetY);
+  //   let rgb = pixel(screen_to_viewport(event.offsetX,event.offsetY, canvas.w, canvas.h));
+  //   console.log('rgb:', rgb);
+  //   debug = false;
+  // });
+
   function frame(time){
-    shapes[1].move(shapes);
-    //console.log(shapes[1].velocity);
-    shapes[1].center = shapes[1].center.add(shapes[1].velocity.scale(1/fps));
-    //if(shapes[1].collide(shapes[2]).t == 0){
-      //console.log(shapes[1].collide(shapes[2]).t);
-      //console.log("NOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO");
+    let pixels = [];
+    for(let i = 0; i < c.w;i++){
+      pixels[i] = [];
+      for(let k =0; k < c.h; k++){
+        pixels[i][k] = new Point(0,0,0);
+      }
+    }
+    //let temp_shapes = shapes;
+    for(let i = 0; i < shapes.length; i++){
+      if(shapes[i].motion.can_move){
+        console.log("erera");
+        shapes[i].save_motion();
+      }
+    }
+    for(let i = 0; i < c.w; i++){
+      for(let k = 0; k< c.h;k++){
+        let color = new Point(0,0,0);
+        for(let ii = 0; ii < anti_alias; ii++){
+          for(let kk = 0; kk < anti_alias;kk++){
+            for(let i= 0; i < shapes.length; i++){
+              if(shapes[i].motion.can_move){
+                let rand_time = Math.random()/fps;
+                shapes[i].center = shapes[i].center.add(shapes[i].motion.velocity.scale(rand_time));
+                //console.log(shapes[i]);
+              }
+            }
+            let randomX = Math.random()/anti_alias;
+            let randomY = Math.random()/anti_alias;
+            let [x,y] = screen_to_viewport(i+ii/anti_alias+randomX,k+kk/anti_alias+randomY,c.w,c.h);
+            let dir = new Point(x,y,-1).norm();
+            color = color.add(ray_color(origin,dir,shapes));
+            for(let i= 0; i < shapes.length; i++){
+              if(shapes[i].motion.can_move){
+                let rand_time = 0;
+                //shapes[i].move(shapes);
+                shapes[i].reload_motion();
+                //console.log(shapes[i]);
+              }
+            }
+          }
+        }
+        color = color.scale(1/anti_alias**2);
+        pixels[i][k] = pixels[i][k].add(color);
+      }
+    }
     //}
+    //console.log(count);
+    for(let i = 0; i < c.w; i++){
+      for(let k = 0; k < c.w; k++){
+        c.setPixel(i,k,pixels[i][k].x,pixels[i][k].y,pixels[i][k].z,255);
+      }
+    }
+    c.setPixels();
+    for(let i = 0; i < shapes.length; i++){
+      if(shapes[i].motion.velocity.len() != 0 || shapes[i].gravity){
+        shapes[1].move(shapes,1);
+        shapes[1].center = shapes[1].center.add(shapes[1].motion.velocity.scale(1/fps));
+      }
+    }
+    //console.log("------------------------------------------------------------------------------------");
+  }
+
+  function frame2(time){
+    shapes[1].move(shapes);
+    shapes[1].center = shapes[1].center.add(shapes[1].velocity.scale(1/fps));
     for(let i = 0; i < c.w; i++){
       for(let k = 0; k< c.h;k++){
         let color = new Point(0,0,0);
@@ -366,40 +414,13 @@
     }
     c.setPixels();
   }
-  /*  function frame(time){
-      shapes[1].move(shapes);
-      //console.log(shapes[1].velocity);
-      shapes[1].center = shapes[1].center.add(shapes[1].velocity.scale(1/fps));
-      //if(shapes[1].collide(shapes[2]).t == 0){
-        //console.log(shapes[1].collide(shapes[2]).t);
-        //console.log("NOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO");
-      //}
-      for(let i = 0; i < c.w; i++){
-        for(let k = 0; k< c.h;k++){
-          let color = new Point(0,0,0);
-          for(let ii = 0; ii < anti_alias; ii++){
-            for(let kk = 0; kk < anti_alias;kk++){
-              let randomX = Math.random()/anti_alias;
-              let randomY = Math.random()/anti_alias;
-              let [x,y] = screen_to_viewport(i+ii/anti_alias+randomX,k+kk/anti_alias+randomY,c.w,c.h);
-              let dir = new Point(x,y,-1).norm();
-              color = color.add(ray_color(origin,dir,shapes));
-            }
-          }
-          color = color.scale(1/anti_alias**2);
-          c.setPixel(i,k,color.x,color.y,color.z,255);
-        }
-      }
-      c.setPixels();
-    }
-    */
+
   function frame1(time){
     let pixels = [];
     for(let i = 0; i < c.w;i++){
       pixels[i] = [];
       for(let k =0; k < c.h; k++){
         pixels[i][k] = new Point(0,0,0);
-        //console.log(pixels[i][k]);
       }
     }
     for(let t = 0; t < 1/fps; t+=1/motion_blur/fps){
@@ -435,10 +456,6 @@
     }
     c.setPixels();
   }
-  function generate_time(time){
-
-  }
-  let t = 0;
-  //frame(0)
-  setInterval(function(){frame(t+=1/fps)},1000/fps);
+  let cur_time = 0;
+  setInterval(function(){frame(cur_time+=1/fps)},2000/fps);
 </script>
