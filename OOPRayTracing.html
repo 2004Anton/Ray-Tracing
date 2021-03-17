@@ -234,7 +234,7 @@
   let light = [new Point(1,10,10)];
   let shapes = [(new Sphere(new Point(-3,0,-3),1,new Point(200,0,100))),
               new Sphere(new Point(-3,4,-6),2,new Point(0,0,255)).set_motion(new Motion().set_movement(new Point(1,-0.2,0)).set_gravity(true)).set_bounce(0.6),
-              new Plane(new Point(0.1,1,0).norm(),-1,new Point(200,200,100))];
+              new Plane(new Point(0,1,0).norm(),-1,new Point(200,200,100))];
   let c = new Canvas(400,400);
   let origin = new Point(0,0,0);
   let debug = false;
